@@ -6,8 +6,7 @@ sse-starlette>=2.1,<2.2
 pydantic>=2.9,<3.0
 python-dotenv>=1.2.2,<2
 
-
-# --- LLM access (OpenRouter only, OpenAI-compatible) ---
+# --- LLM access (Groq, OpenAI-compatible) ---
 langchain>=1.3,<1.4
 langchain-core>=1.3,<1.6
 langchain-openai>=1.4,<1.5
@@ -15,35 +14,31 @@ langgraph>=1.2,<1.3
 langgraph-checkpoint-sqlite>=3.1,<3.2
 langgraph-checkpoint-redis>=0.5,<0.6
 
-
 # --- SQL agent (Module 6) ---
 # SQLDatabaseToolkit currently lives in langchain-community.
 langchain-community>=0.4,<0.5
 sqlalchemy>=2.0,<2.1
 
-
 # --- Multi-agent orchestration ---
 crewai>=1.15,<1.16
-
 
 # --- RAG / retrieval ---
 langchain-text-splitters>=1.0,<1.2
 chromadb>=1.1,<1.2
 
-# NumPy and SciPy stay below the NumPy 2.x ABI boundary because
-# spaCy 3.7.x / Thinc 8.2.x depend on NumPy 1.x-compatible binaries.
-numpy>=1.26,<2.0
-scipy>=1.13,<1.15
+# Keep NumPy 1.x for spaCy 3.7.x / Thinc 8.2.x.
+# PyArrow 21 satisfies datasets 5.x's >=21 requirement; verify imports in CI.
+numpy==1.26.4
+scipy==1.14.1
+pyarrow==21.0.0
 
 sentence-transformers>=3.1,<3.2
 pypdf>=5.0,<6.0
 networkx>=3.4,<3.7
 
-
 # --- RAG evaluation (Module 14) ---
 ragas>=0.4,<0.5
 datasets>=4.0,<6.0
-
 
 # --- Guardrails / safety ---
 nemoguardrails>=0.23,<0.24
@@ -52,52 +47,29 @@ presidio-analyzer>=2.2,<2.3
 presidio-anonymizer>=2.2,<2.3
 spacy>=3.7,<3.8
 
-
 # --- MCP ---
 mcp>=1.2,<2.0
-
 
 # --- Persistence / caching / jobs ---
 redis>=5.2.1,<6.0
 requests>=2.32,<3.0
 
-
 # --- Intent router ---
 scikit-learn>=1.5,<1.6
 joblib>=1.4,<1.5
 
-
 # --- Observability ---
-
-# LangSmith
 langsmith>=0.3.45,<1.0
-
-# Keep the complete OpenTelemetry stack on the version family required
-# by CrewAI 1.15.x. Do not allow OpenInference to upgrade these to
-# OpenTelemetry 1.44.x, which conflicts with CrewAI and the exporters.
 opentelemetry-api==1.42.1
 opentelemetry-sdk==1.42.1
 opentelemetry-semantic-conventions==0.63b1
 opentelemetry-instrumentation==0.63b1
-
-# Prometheus exporter must match the OpenTelemetry 1.42.x contrib line.
 opentelemetry-exporter-prometheus==0.63b1
 prometheus-client>=0.21,<0.22
-
-# Explicitly keep OTLP exporters compatible with SDK 1.42.1.
 opentelemetry-exporter-otlp-proto-http==1.42.1
 opentelemetry-exporter-otlp-proto-grpc==1.42.1
-
-# Phoenix OpenTelemetry exporter.
-# Phoenix itself runs as a separate Docker service.
 arize-phoenix-otel>=0.17,<0.18
-
-# Explicit LangChain/LangGraph instrumentation for Phoenix.
-# Pin this instead of taking the newest release, because newer releases
-# can cause pip to upgrade the OpenTelemetry stack beyond CrewAI's
-# supported 1.42.x versions.
 openinference-instrumentation-langchain==0.1.68
-
 
 # --- Testing ---
 pytest>=8.3,<8.4
