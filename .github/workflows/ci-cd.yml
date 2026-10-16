@@ -1,3 +1,4 @@
+
 name: CommerceOps AI CI
 
 on:
@@ -98,9 +99,31 @@ jobs:
           echo "Disk space after dependency installation:"
           df -h /
 
+      - name: Fix NumPy and PyArrow compatibility
+        working-directory: backend
+        run: |
+          echo "Installed versions before compatibility fix:"
+
+          python -m pip show numpy pyarrow
+
+          echo "Installing NumPy 2.x for PyArrow compatibility..."
+
+          python -m pip install --upgrade \
+            "numpy>=2.0,<3.0"
+
+          echo "Checking installed package compatibility..."
+
+          python -m pip check
+
+          echo "Verifying NumPy, PyArrow and Sentence Transformers..."
+
+          python -c "import numpy; print('NumPy:', numpy.__version__)"
+          python -c "import pyarrow; print('PyArrow:', pyarrow.__version__)"
+          python -c "import sentence_transformers; print('Sentence Transformers import successful')"
+
       - name: Verify CPU-only PyTorch
         run: |
-          python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA version:', torch.version.cuda)"
+          python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA version:', torch.version.cuda); assert torch.version.cuda is None, 'Expected CPU-only PyTorch'"
 
       - name: Install spaCy language model
         working-directory: backend
