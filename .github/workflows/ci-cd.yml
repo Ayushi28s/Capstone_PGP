@@ -16,7 +16,7 @@ jobs:
 
     env:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      MODEL: llama-3.3-70b-versatile
+      MODEL: openai/gpt-oss-120b
       MOCK_LLM: "false"
       LANGSMITH_TRACING: "false"
       LANGCHAIN_TRACING_V2: "false"
