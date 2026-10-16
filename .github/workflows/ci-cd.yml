@@ -1,15 +1,19 @@
-
 name: CommerceOps AI CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
+  workflow_dispatch:
 
 jobs:
   validate-backend:
+    name: Validate Backend
     runs-on: ubuntu-latest
 
     env:
@@ -19,8 +23,11 @@ jobs:
 
       LANGSMITH_TRACING: "false"
       LANGCHAIN_TRACING_V2: "false"
+      PHOENIX_ENABLED: "false"
 
       REDIS_URL: redis://localhost:6379/0
+      USE_REDIS_CHECKPOINTER: "false"
+
       DATA_DIR: ./data
       SQLITE_DB_PATH: ./data/commerceops.db
       CHECKPOINT_DB_PATH: ./data/checkpoints.db
@@ -29,7 +36,15 @@ jobs:
       INTENT_ROUTER_MODEL_PATH: ./data/intent_router.joblib
       MCP_SQLITE_DB_PATH: ./data/commerceops.db
 
-      PHOENIX_ENABLED: "false"
+      APP_ENV: development
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+      CORS_ORIGINS: "*"
+
+      REFUND_APPROVAL_THRESHOLD_USD: "250.0"
+      RAGAS_FAITHFULNESS_THRESHOLD: "0.90"
+
+      PIP_NO_CACHE_DIR: "1"
 
     services:
       redis:
@@ -46,20 +61,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Check initial disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h /
+
+      - name: Free disk space on GitHub runner
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+          echo "Disk space after cleanup:"
+          df -h /
+
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: backend/requirements.txt
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Install CPU-only PyTorch
+        run: |
+          python -m pip install torch \
+            --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install backend dependencies
         working-directory: backend
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
 
-      - name: Install spaCy model
+          echo "Disk space after dependency installation:"
+          df -h /
+
+      - name: Verify CPU-only PyTorch
+        run: |
+          python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA version:', torch.version.cuda)"
+
+      - name: Install spaCy language model
         working-directory: backend
         run: |
           python -m spacy download en_core_web_sm
@@ -69,7 +112,7 @@ jobs:
         run: |
           python -m compileall app mcp_servers scripts -q
 
-      - name: Validate important imports
+      - name: Validate backend imports
         working-directory: backend
         run: |
           python -c "import app.main"
@@ -79,35 +122,56 @@ jobs:
           python -c "import app.agents.merchandising_agent"
           python -c "import app.agents.market_intel_agent"
 
-      - name: Seed runtime data
+      - name: Verify Groq configuration
+        working-directory: backend
+        run: |
+          python -c "from pathlib import Path; s=Path('app/llm_client.py').read_text(); assert 'groq' in s.lower(), 'Groq integration not found'; print('Groq integration verified')"
+
+      - name: Seed runtime database and indexes
         working-directory: backend
         run: |
           python scripts/seed_db.py
 
-      - name: Run preflight check
+      - name: Verify generated artifacts
+        working-directory: backend
+        run: |
+          python -c "from pathlib import Path; files=['data/commerceops.db','data/knowledge_graph.json','data/intent_router.joblib']; missing=[f for f in files if not Path(f).exists()]; assert not missing, f'Missing artifacts: {missing}'; print('Database, knowledge graph and intent classifier verified')"
+
+      - name: Run backend preflight check
         working-directory: backend
         run: |
           python preflight_check.py
 
+      - name: Display final disk usage
+        if: always()
+        run: |
+          df -h /
+
   validate-frontend:
+    name: Validate Frontend
     runs-on: ubuntu-latest
+
+    env:
+      API_BASE_URL: http://localhost:8000
+      PIP_NO_CACHE_DIR: "1"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: frontend/requirements.txt
+
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
 
       - name: Compile frontend Python files
         working-directory: frontend
@@ -116,7 +180,9 @@ jobs:
 
       - name: Validate frontend imports
         working-directory: frontend
-        env:
-          API_BASE_URL: http://localhost:8000
         run: |
           python -c "import api_client"
+
+      - name: Verify Streamlit installation
+        run: |
+          python -m streamlit --version
