@@ -1,0 +1,122 @@
+
+name: CommerceOps AI CI
+
+on:
+  push:
+    branches: [main]
+
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-backend:
+    runs-on: ubuntu-latest
+
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      MODEL: llama-3.3-70b-versatile
+      MOCK_LLM: "false"
+
+      LANGSMITH_TRACING: "false"
+      LANGCHAIN_TRACING_V2: "false"
+
+      REDIS_URL: redis://localhost:6379/0
+      DATA_DIR: ./data
+      SQLITE_DB_PATH: ./data/commerceops.db
+      CHECKPOINT_DB_PATH: ./data/checkpoints.db
+      CHROMA_DIR: ./data/chroma
+      KNOWLEDGE_GRAPH_PATH: ./data/knowledge_graph.json
+      INTENT_ROUTER_MODEL_PATH: ./data/intent_router.joblib
+      MCP_SQLITE_DB_PATH: ./data/commerceops.db
+
+      PHOENIX_ENABLED: "false"
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install spaCy model
+        working-directory: backend
+        run: |
+          python -m spacy download en_core_web_sm
+
+      - name: Compile backend Python files
+        working-directory: backend
+        run: |
+          python -m compileall app mcp_servers scripts -q
+
+      - name: Validate important imports
+        working-directory: backend
+        run: |
+          python -c "import app.main"
+          python -c "import app.worker"
+          python -c "import app.agents.support_crew"
+          python -c "import app.agents.knowledge_agent"
+          python -c "import app.agents.merchandising_agent"
+          python -c "import app.agents.market_intel_agent"
+
+      - name: Seed runtime data
+        working-directory: backend
+        run: |
+          python scripts/seed_db.py
+
+      - name: Run preflight check
+        working-directory: backend
+        run: |
+          python preflight_check.py
+
+  validate-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: frontend/requirements.txt
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile frontend Python files
+        working-directory: frontend
+        run: |
+          python -m compileall . -q
+
+      - name: Validate frontend imports
+        working-directory: frontend
+        env:
+          API_BASE_URL: http://localhost:8000
+        run: |
+          python -c "import api_client"

@@ -1,0 +1,25 @@
+@"
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs and local data
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Local configuration
+.streamlit/secrets.toml
+"@ | Add-Content .gitignore
+/Capstone_PGP/
