@@ -1,10 +1,7 @@
 import json
-
 import networkx as nx
-
 from app.config import settings
 from app.db import get_conn
-
 
 def build_knowledge_graph() -> nx.MultiDiGraph:
     g = nx.MultiDiGraph()
