@@ -1,3 +1,4 @@
+
 FROM python:3.11-slim AS builder
 
 WORKDIR /build
@@ -32,9 +33,13 @@ ENV PYTHONUNBUFFERED=1
 COPY app ./app
 COPY mcp_servers ./mcp_servers
 COPY scripts ./scripts
-COPY data ./data
+
+# Store initial application data outside the ECS shared volume
+COPY data /app/bootstrap_data
+
 COPY preflight_check.py .
 
+# Prepare runtime directories and assign permissions
 RUN mkdir -p /app/data/chroma \
     && chown -R commerceops:commerceops /app
 
