@@ -4,7 +4,7 @@ name: CommerceOps AI AWS Deploy
 on:
   push:
     branches:
-      - aws-deployment
+      - groq-aws-deployment
   workflow_dispatch:
 
 env:
