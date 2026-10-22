@@ -285,7 +285,10 @@ jobs:
 
       - name: Verify prepared container configuration
         run: |
-          jq -e '
+          jq -e \
+            --arg model "$GROQ_MODEL" \
+            --arg parameter "$GROQ_PARAMETER_ARN" \
+            '
             [
               .containerDefinitions[]
               | select(
@@ -294,15 +297,15 @@ jobs:
                   or .name == "worker"
                 )
               | (
-                  any(.environment[]?; .name == "MODEL" and .value == "openai/gpt-oss-120b")
+                  any(.environment[]?; .name == "MODEL" and .value == $model)
                   and
-                  any(.secrets[]?; .name == "GROQ_API_KEY")
+                  any(.secrets[]?; .name == "GROQ_API_KEY" and .valueFrom == $parameter)
                   and
-                  (all(.secrets[]?; .name != "OPENROUTER_API_KEY"))
+                  all(.secrets[]?; .name != "OPENROUTER_API_KEY")
                 )
             ]
-            | length == 3 and all(.[])
-          ' task-definition-new.json
+            | (length == 3 and all(.[]; . == true))
+            ' task-definition-new.json
 
           jq '
             .containerDefinitions[]
@@ -313,7 +316,7 @@ jobs:
                 secretNames: [.secrets[]? | .name],
                 dependsOn
               }
-          ' task-definition-new.json
+            ' task-definition-new.json
 
       - name: Register new ECS task definition
         id: register-task
