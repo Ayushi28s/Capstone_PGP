@@ -12,7 +12,7 @@ env:
   ECR_BACKEND_REPOSITORY: commerceops-backend
   ECR_FRONTEND_REPOSITORY: commerceops-frontend
   ECS_CLUSTER: commerceops-cluster
-  ECS_SERVICE: commerceops-service
+  ECS_SERVICE: commerceops-app-task-service-f1dt78ar
   ECS_TASK_DEFINITION: commerceops-app-task
   GROQ_MODEL: openai/gpt-oss-120b
   GROQ_PARAMETER_ARN: arn:aws:ssm:ap-south-1:024899754411:parameter/commerceops/groq-api-key
