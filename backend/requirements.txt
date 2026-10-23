@@ -21,6 +21,7 @@ sqlalchemy>=2.0,<2.1
 
 # --- Multi-agent orchestration ---
 crewai>=1.15,<1.16
+litellm==1.99.4
 
 # --- RAG / retrieval ---
 langchain-text-splitters>=1.0,<1.2
